@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.task-card {
+  @apply bg-white rounded-lg shadow-md p-4 mb-3 cursor-pointer;
+}
+
+.column {
+  @apply bg-gray-50 rounded-lg p-4 min-h-[500px] flex-1;
+}
+
+.column-header {
+  @apply font-bold text-lg mb-4 pb-2 border-b;
+}
+
+.dragging {
+  @apply opacity-50 shadow-lg;
+}
