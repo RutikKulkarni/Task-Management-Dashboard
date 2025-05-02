@@ -1,98 +1,127 @@
-import React, { Fragment } from "react";
-import { Dialog, Transition } from "@headlessui/react";
-import { Task } from "../types";
+// TaskDetailsModal.tsx
+import React, { useState } from "react";
+import { Task, TaskStatus, UpdateTaskPayload } from "../types";
+import { useTasks } from "../hooks/useTasks";
+import { IoClose, MdEdit } from "./Icons/Icons";
 
 interface TaskDetailsModalProps {
-  isOpen: boolean;
+  task: Task;
   onClose: () => void;
-  task: Task | null;
 }
 
 const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
-  isOpen,
-  onClose,
   task,
+  onClose,
 }) => {
-  if (!task) return null;
+  const { updateTask } = useTasks();
+  const [isEditing, setIsEditing] = useState(false);
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description);
+  const [status, setStatus] = useState(task.status);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const updatedTask: UpdateTaskPayload = {
+      id: task.id,
+      title,
+      description,
+      status,
+    };
+
+    try {
+      await updateTask(updatedTask);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating task:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const formatStatus = (status: string): string => {
+    switch (status) {
+      case "todo":
+        return "To Do";
+      case "inProgress":
+        return "In Progress";
+      case "done":
+        return "Done";
+      default:
+        return status;
+    }
+  };
 
   return (
-    <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-10" onClose={onClose}>
-        <Transition.Child
-          as={Fragment}
-          enter="ease-out duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="ease-in duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
-        </Transition.Child>
-
-        <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4 text-center">
-            <Transition.Child
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-95"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-95"
-            >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                <Dialog.Title
-                  as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900 mb-4"
-                >
-                  Task Details
-                </Dialog.Title>
-
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500 mb-1">ID</p>
-                  <p className="text-gray-900">{task.id}</p>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500 mb-1">Title</p>
-                  <p className="text-gray-900 font-medium">{task.title}</p>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500 mb-1">Description</p>
-                  <p className="text-gray-900">
-                    {task.description || "No description"}
-                  </p>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500 mb-1">Status</p>
-                  <p className="text-gray-900">{task.status}</p>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500 mb-1">Created At</p>
-                  <p className="text-gray-900">
-                    {new Date(task.createdAt).toLocaleString()}
-                  </p>
-                </div>
-
-                <div className="mt-6 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                  >
-                    Close
-                  </button>
-                </div>
-              </Dialog.Panel>
-            </Transition.Child>
-          </div>
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+      <div className="relative bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 m-4 max-w-lg w-full">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            {isEditing ? "Edit Task" : "Task Details"}
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            title="Close"
+          >
+            <IoClose className="w-6 h-6" />
+          </button>
         </div>
-      </Dialog>
-    </Transition>
+
+        {isEditing ? (
+          <form onSubmit={handleSubmit}>
+            {/* title, description, status input fields here... */}
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div>
+            <div className="mb-4">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                {task.title}
+              </h3>
+              <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                {task.description}
+              </p>
+            </div>
+            <div className="mb-4">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Status:{" "}
+              </span>
+              <span className="text-sm text-gray-900 dark:text-gray-100">
+                {formatStatus(task.status)}
+              </span>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 flex items-center gap-2"
+              >
+                <MdEdit className="w-4 h-4" />
+                Edit
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

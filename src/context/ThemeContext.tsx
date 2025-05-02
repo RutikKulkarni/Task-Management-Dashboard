@@ -1,42 +1,51 @@
-import React, { createContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
 
 interface ThemeContextProps {
   theme: Theme;
-  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
 }
 
 export const ThemeContext = createContext<ThemeContextProps>({
   theme: "light",
-  setTheme: () => {},
+  toggleTheme: () => {},
 });
 
 interface ThemeProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
-  // Check if a theme is stored in localStorage
-  const savedTheme =
-    typeof window !== "undefined"
-      ? (localStorage.getItem("theme") as Theme) || "light"
-      : "light";
+  const [theme, setTheme] = useState<Theme>(() => {
+    // Check if theme is stored in localStorage
+    const savedTheme = localStorage.getItem("theme");
+    // Check if user prefers dark mode
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
 
-  const [theme, setTheme] = useState<Theme>(savedTheme);
+    return (savedTheme as Theme) || (prefersDark ? "dark" : "light");
+  });
 
-  // Update document classes and localStorage when theme changes
   useEffect(() => {
-    // Apply theme to document body
-    document.body.classList.remove("theme-light", "theme-dark");
-    document.body.classList.add(`theme-${theme}`);
-
-    // Save to localStorage
+    // Update localStorage when theme changes
     localStorage.setItem("theme", theme);
+
+    // Update document class for Tailwind dark mode
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
   }, [theme]);
 
+  const toggleTheme = () => {
+    setTheme((prevTheme) => (prevTheme === "light" ? "dark" : "light"));
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

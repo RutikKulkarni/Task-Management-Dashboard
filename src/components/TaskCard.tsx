@@ -1,49 +1,110 @@
-import React from "react";
-import { Draggable } from "react-beautiful-dnd";
+import React, { useState } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Task } from "../types";
+import TaskDetailsModal from "./TaskDetailsModal";
 
 interface TaskCardProps {
   task: Task;
-  index: number;
-  onTaskClick: (task: Task) => void;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task, index, onTaskClick }) => {
-  // We ensure the draggableId is a string (React Beautiful DnD requirement)
-  const draggableId = String(task.id);
+const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: task.id.toString(),
+    data: {
+      task,
+    },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  // Status badge color based on task status
+  const statusColor = {
+    todo: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
+    inProgress:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+    done: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+  };
+
+  // Format status text for display
+  const formatStatus = (status: string): string => {
+    switch (status) {
+      case "todo":
+        return "To Do";
+      case "inProgress":
+        return "In Progress";
+      case "done":
+        return "Done";
+      default:
+        return status;
+    }
+  };
 
   return (
-    <Draggable draggableId={draggableId} index={index}>
-      {(provided, snapshot) => (
-        <div
-          className={`task-card ${
-            snapshot.isDragging ? "dragging" : ""
-          } hover:ring-2 hover:ring-primary hover:cursor-grab active:cursor-grabbing`}
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          onClick={() => onTaskClick(task)}
-        >
-          <h3 className="font-semibold text-gray-900 mb-1">{task.title}</h3>
-          <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-            {task.description || "No description provided"}
-          </p>
-          <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
-            <span>
-              ID:{" "}
-              {typeof task.id === "string" && task.id.length > 8
-                ? `${task.id.substring(0, 4)}...`
-                : task.id}
-            </span>
-            <span>
-              {task.createdAt
-                ? new Date(task.createdAt).toLocaleDateString()
-                : "Unknown date"}
-            </span>
-          </div>
+    <>
+      <div
+        ref={setNodeRef}
+        style={style}
+        {...attributes}
+        {...listeners}
+        className="p-4 mb-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 cursor-grab hover:shadow-md transition-shadow"
+        onClick={() => setIsDetailsModalOpen(true)}
+      >
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">
+            {task.title}
+          </h3>
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${
+              statusColor[task.status]
+            }`}
+          >
+            {formatStatus(task.status)}
+          </span>
         </div>
+        {task.description && (
+          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+            {task.description}
+          </p>
+        )}
+        <div className="flex justify-between items-center mt-2">
+          {task.userId && (
+            <span className="text-xs text-gray-500 dark:text-gray-500">
+              User: {task.userId}
+            </span>
+          )}
+          <button
+            className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDetailsModalOpen(true);
+            }}
+          >
+            Details
+          </button>
+        </div>
+      </div>
+
+      {isDetailsModalOpen && (
+        <TaskDetailsModal
+          task={task}
+          onClose={() => setIsDetailsModalOpen(false)}
+        />
       )}
-    </Draggable>
+    </>
   );
 };
 

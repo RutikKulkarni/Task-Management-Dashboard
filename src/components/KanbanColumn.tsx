@@ -1,58 +1,72 @@
 import React from "react";
-import { Droppable } from "react-beautiful-dnd";
-import { Column, Task, TaskStatus } from "../types";
+import { Task, TaskStatus } from "../types";
 import TaskCard from "./TaskCard";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 
 interface KanbanColumnProps {
-  column: Column;
+  title: string;
   tasks: Task[];
-  onTaskClick: (task: Task) => void;
+  status: TaskStatus;
 }
 
-const getColumnStyle = (status: TaskStatus) => {
-  switch (status) {
-    case TaskStatus.TODO:
-      return "bg-todo";
-    case TaskStatus.IN_PROGRESS:
-      return "bg-inprogress";
-    case TaskStatus.DONE:
-      return "bg-done";
-    default:
-      return "bg-gray-50";
-  }
-};
-
 const KanbanColumn: React.FC<KanbanColumnProps> = ({
-  column,
+  title,
   tasks,
-  onTaskClick,
+  status,
 }) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+  });
+
+  // Get unique task IDs for the sortable context
+  const taskIds = tasks.map((task) => task.id.toString());
+
+  // Column styling based on status
+  const getColumnStyle = () => {
+    switch (status) {
+      case "todo":
+        return "border-blue-500 dark:border-blue-700";
+      case "inProgress":
+        return "border-yellow-500 dark:border-yellow-700";
+      case "done":
+        return "border-green-500 dark:border-green-700";
+      default:
+        return "border-gray-300 dark:border-gray-700";
+    }
+  };
+
   return (
-    <div className={`column ${getColumnStyle(column.status)}`}>
-      <h2 className="column-header">{column.title}</h2>
-      <Droppable droppableId={column.id}>
-        {(provided, snapshot) => (
-          <div
-            ref={provided.innerRef}
-            {...provided.droppableProps}
-            className={`min-h-[400px] ${
-              snapshot.isDraggingOver ? "bg-gray-100 bg-opacity-50" : ""
-            }`}
-            data-column-id={column.id}
-            data-status={column.status}
-          >
-            {tasks.map((task, index) => (
-              <TaskCard
-                key={task.id}
-                task={task}
-                index={index}
-                onTaskClick={onTaskClick}
-              />
-            ))}
-            {provided.placeholder}
-          </div>
-        )}
-      </Droppable>
+    <div
+      ref={setNodeRef}
+      className={`flex flex-col h-full min-h-[500px] bg-gray-50 dark:bg-gray-900 rounded-lg shadow ${
+        isOver ? "ring-2 ring-blue-400 dark:ring-blue-600" : ""
+      }`}
+    >
+      <div className={`px-4 py-3 border-t-4 ${getColumnStyle()} rounded-t-lg`}>
+        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          {title}
+          <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
+            ({tasks.length})
+          </span>
+        </h3>
+      </div>
+      <div className="flex-1 p-3 overflow-y-auto">
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
+          {tasks.length > 0 ? (
+            tasks.map((task) => <TaskCard key={task.id} task={task} />)
+          ) : (
+            <div className="flex items-center justify-center h-24 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No tasks yet
+              </p>
+            </div>
+          )}
+        </SortableContext>
+      </div>
     </div>
   );
 };

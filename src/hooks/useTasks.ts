@@ -1,14 +1,23 @@
 import { useContext } from "react";
 import { TaskContext } from "../context/TaskContext";
+import { Task, TaskStatus } from "../types";
 
-const useTasks = () => {
+export const useTasks = () => {
   const context = useContext(TaskContext);
 
   if (context === undefined) {
     throw new Error("useTasks must be used within a TaskProvider");
   }
 
-  return context;
-};
+  // Helper function to filter tasks by status
+  const getTasksByStatus = (status: TaskStatus): Task[] => {
+    return context.tasks.filter((task) => task.status === status);
+  };
 
-export default useTasks;
+  return {
+    ...context,
+    todoTasks: getTasksByStatus("todo"),
+    inProgressTasks: getTasksByStatus("inProgress"),
+    doneTasks: getTasksByStatus("done"),
+  };
+};

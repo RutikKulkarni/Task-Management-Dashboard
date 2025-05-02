@@ -1,189 +1,122 @@
-import React, { createContext, useState, useEffect, ReactNode } from "react";
-import { Task, TaskStatus, Column } from "../types";
-import { fetchTasks, createTask, updateTask, deleteTask } from "../api/taskApi";
+import React, { createContext, useState, useEffect } from "react";
+import { taskApi } from "../api/taskApi";
+import {
+  Task,
+  TaskContextType,
+  CreateTaskPayload,
+  UpdateTaskPayload,
+  DragEndData,
+} from "../types";
 
-interface TaskContextProps {
-  tasks: Task[];
-  columns: Column[];
-  loading: boolean;
-  error: string | null;
-  addTask: (task: Omit<Task, "id" | "createdAt">) => Promise<void>;
-  updateTaskStatus: (taskId: string, newStatus: TaskStatus) => Promise<void>;
-  moveTask: (
-    taskId: string,
-    sourceStatus: TaskStatus,
-    destinationStatus: TaskStatus
-  ) => Promise<void>;
-}
-
-export const TaskContext = createContext<TaskContextProps>({
+export const TaskContext = createContext<TaskContextType>({
   tasks: [],
-  columns: [],
-  loading: false,
+  isLoading: false,
   error: null,
   addTask: async () => {},
-  updateTaskStatus: async () => {},
+  updateTask: async () => {},
+  fetchTasks: async () => {},
   moveTask: async () => {},
 });
 
 interface TaskProviderProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
 export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [columns, setColumns] = useState<Column[]>([
-    { id: "1", title: "To Do", status: TaskStatus.TODO, taskIds: [] },
-    {
-      id: "2",
-      title: "In Progress",
-      status: TaskStatus.IN_PROGRESS,
-      taskIds: [],
-    },
-    { id: "3", title: "Done", status: TaskStatus.DONE, taskIds: [] },
-  ]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Initialize tasks and columns
+  const fetchTasks = async (): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const fetchedTasks = await taskApi.fetchTasks();
+      setTasks(fetchedTasks);
+    } catch (err) {
+      setError("Failed to fetch tasks. Please try again later.");
+      console.error("Error fetching tasks:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addTask = async (taskData: CreateTaskPayload): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const newTask = await taskApi.createTask(taskData);
+      setTasks((prevTasks) => [...prevTasks, newTask]);
+    } catch (err) {
+      setError("Failed to add task. Please try again later.");
+      console.error("Error adding task:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateTask = async (taskData: UpdateTaskPayload): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await taskApi.updateTask(taskData);
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === taskData.id ? { ...task, ...taskData } : task
+        )
+      );
+    } catch (err) {
+      setError("Failed to update task. Please try again later.");
+      console.error("Error updating task:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const moveTask = async ({
+    task,
+    destination,
+  }: DragEndData): Promise<void> => {
+    // Optimistically update the UI
+    const updatedTask = { ...task, status: destination };
+    setTasks((prevTasks) =>
+      prevTasks.map((t) => (t.id === task.id ? updatedTask : t))
+    );
+
+    // Then update the backend
+    try {
+      await taskApi.updateTask({
+        id: task.id,
+        status: destination,
+      });
+    } catch (err) {
+      // Revert the UI change if the API call fails
+      setTasks((prevTasks) =>
+        prevTasks.map((t) => (t.id === task.id ? task : t))
+      );
+      setError("Failed to move task. Please try again later.");
+      console.error("Error moving task:", err);
+    }
+  };
+
+  // Fetch tasks on component mount
   useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        setLoading(true);
-        const fetchedTasks = await fetchTasks();
-        setTasks(fetchedTasks);
-
-        // Build column taskIds from fetched tasks
-        const newColumns = columns.map((column) => {
-          return {
-            ...column,
-            taskIds: fetchedTasks
-              .filter((task) => task.status === column.status)
-              .map((task) => task.id),
-          };
-        });
-
-        setColumns(newColumns);
-        setLoading(false);
-      } catch (err) {
-        setError("Failed to fetch tasks");
-        setLoading(false);
-        console.error(err);
-      }
-    };
-
-    loadTasks();
+    fetchTasks();
   }, []);
 
-  // Add a new task
-  const addTask = async (newTaskData: Omit<Task, "id" | "createdAt">) => {
-    try {
-      const newTask = await createTask(newTaskData);
-
-      // Update tasks state with the new task
-      setTasks((prevTasks) => [...prevTasks, newTask]);
-
-      // Update column taskIds
-      setColumns((prevColumns) => {
-        return prevColumns.map((column) => {
-          if (column.status === newTask.status) {
-            return {
-              ...column,
-              taskIds: [...column.taskIds, newTask.id],
-            };
-          }
-          return column;
-        });
-      });
-    } catch (err) {
-      setError("Failed to add task");
-      console.error(err);
-    }
-  };
-
-  // Update a task's status
-  const updateTaskStatus = async (taskId: string, newStatus: TaskStatus) => {
-    try {
-      const taskToUpdate = tasks.find((task) => task.id === taskId);
-      if (!taskToUpdate) {
-        console.error("Task not found:", taskId);
-        return;
-      }
-
-      const updatedTask = { ...taskToUpdate, status: newStatus };
-      await updateTask(updatedTask);
-
-      // Update tasks state with the updated task
-      setTasks((prevTasks) =>
-        prevTasks.map((task) => (task.id === taskId ? updatedTask : task))
-      );
-    } catch (err) {
-      setError("Failed to update task");
-      console.error(err);
-    }
-  };
-
-  // Move a task between columns (drag and drop)
-  const moveTask = async (
-    taskId: string,
-    sourceStatus: TaskStatus,
-    destinationStatus: TaskStatus
-  ) => {
-    try {
-      // Find source and destination columns
-      const sourceColumn = columns.find((col) => col.status === sourceStatus);
-      const destColumn = columns.find(
-        (col) => col.status === destinationStatus
-      );
-
-      if (!sourceColumn || !destColumn) {
-        console.error("Could not find source or destination column");
-        return;
-      }
-
-      // Update columns state
-      setColumns((prevColumns) => {
-        return prevColumns.map((column) => {
-          // Remove from source column
-          if (column.status === sourceStatus) {
-            return {
-              ...column,
-              taskIds: column.taskIds.filter((id) => id !== taskId),
-            };
-          }
-
-          // Add to destination column
-          if (column.status === destinationStatus) {
-            // Check if taskId already exists in destination to prevent duplicates
-            if (!column.taskIds.includes(taskId)) {
-              return {
-                ...column,
-                taskIds: [...column.taskIds, taskId],
-              };
-            }
-          }
-
-          return column;
-        });
-      });
-
-      // Update task status
-      await updateTaskStatus(taskId, destinationStatus);
-    } catch (err) {
-      setError("Failed to move task");
-      console.error(err);
-    }
-  };
-
-  const value = {
-    tasks,
-    columns,
-    loading,
-    error,
-    addTask,
-    updateTaskStatus,
-    moveTask,
-  };
-
-  return <TaskContext.Provider value={value}>{children}</TaskContext.Provider>;
+  return (
+    <TaskContext.Provider
+      value={{
+        tasks,
+        isLoading,
+        error,
+        addTask,
+        updateTask,
+        fetchTasks,
+        moveTask,
+      }}
+    >
+      {children}
+    </TaskContext.Provider>
+  );
 };

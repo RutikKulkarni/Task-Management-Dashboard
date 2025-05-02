@@ -1,131 +1,101 @@
 import React, { useState } from "react";
-import { DragDropContext, DropResult } from "react-beautiful-dnd";
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import KanbanColumn from "./KanbanColumn";
+import TaskCard from "./TaskCard";
 import AddTaskModal from "./AddTaskModal";
-import TaskDetailsModal from "./TaskDetailsModal";
-import useTasks from "../hooks/useTasks";
+import { useTasks } from "../hooks/useTasks";
 import { Task, TaskStatus } from "../types";
+import ThemeToggle from "./ThemeToggle";
 
 const KanbanBoard: React.FC = () => {
-  const { tasks, columns, loading, error, moveTask } = useTasks();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const { todoTasks, inProgressTasks, doneTasks, moveTask } = useTasks();
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
-  const handleTaskClick = (task: Task) => {
-    setSelectedTask(task);
-    setIsDetailsModalOpen(true);
+  // Configure sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDragStart = (event: DragEndEvent) => {
+    const { active } = event;
+    const activeData = active.data.current as { task: Task } | undefined;
+
+    if (activeData) {
+      setActiveTask(activeData.task);
+    }
   };
 
-  const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-    // If no destination or dropped in the same place
-    if (!destination) return;
+    if (over && active.id !== over.id) {
+      const activeData = active.data.current as { task: Task } | undefined;
+      const destination = over.id as TaskStatus;
 
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
-
-    // Find source and destination columns by ID
-    const sourceColumn = columns.find((col) => col.id === source.droppableId);
-    const destColumn = columns.find(
-      (col) => col.id === destination.droppableId
-    );
-
-    if (!sourceColumn || !destColumn) {
-      console.error("Could not find source or destination column", {
-        sourceId: source.droppableId,
-        destId: destination.droppableId,
-        availableColumns: columns.map((c) => c.id),
-      });
-      return;
-    }
-
-    // Find the task that was dragged
-    const taskToMove = tasks.find((t) => t.id === draggableId);
-    if (!taskToMove) {
-      console.error("Could not find task with ID:", draggableId);
-      return;
-    }
-
-    // Update task status if moving between different columns
-    if (sourceColumn.status !== destColumn.status) {
-      try {
-        await moveTask(draggableId, sourceColumn.status, destColumn.status);
-      } catch (err) {
-        console.error("Error moving task:", err);
+      if (activeData && activeData.task) {
+        moveTask({
+          task: activeData.task,
+          destination,
+        });
       }
     }
+
+    setActiveTask(null);
   };
-
-  // Get tasks for a specific column
-  const getTasksForColumn = (columnId: string): Task[] => {
-    const column = columns.find((col) => col.id === columnId);
-    if (!column) return [];
-
-    // Get all tasks that match the column's status
-    return tasks.filter((task) => task.status === column.status);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div
-        className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
-        role="alert"
-      >
-        <strong className="font-bold">Error: </strong>
-        <span className="block sm:inline">{error}</span>
-      </div>
-    );
-  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">
+    <div className="h-full">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-semibold text-gray-800 dark:text-white">
           Task Management Dashboard
-        </h1>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="px-4 py-2 font-medium text-white bg-primary rounded-md hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-        >
-          Add New Task
-        </button>
+        </h2>
+        <div className="flex items-center space-x-4">
+          <ThemeToggle />
+          <button
+            onClick={() => setIsAddTaskModalOpen(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+          >
+            Add New Task
+          </button>
+        </div>
       </div>
 
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {columns.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              column={column}
-              tasks={getTasksForColumn(column.id)}
-              onTaskClick={handleTaskClick}
-            />
-          ))}
+          <KanbanColumn title="To Do" tasks={todoTasks} status="todo" />
+          <KanbanColumn
+            title="In Progress"
+            tasks={inProgressTasks}
+            status="inProgress"
+          />
+          <KanbanColumn title="Done" tasks={doneTasks} status="done" />
         </div>
-      </DragDropContext>
+
+        <DragOverlay>
+          {activeTask ? <TaskCard task={activeTask} /> : null}
+        </DragOverlay>
+      </DndContext>
 
       <AddTaskModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />
-      <TaskDetailsModal
-        isOpen={isDetailsModalOpen}
-        onClose={() => setIsDetailsModalOpen(false)}
-        task={selectedTask}
+        isOpen={isAddTaskModalOpen}
+        onClose={() => setIsAddTaskModalOpen(false)}
       />
     </div>
   );
