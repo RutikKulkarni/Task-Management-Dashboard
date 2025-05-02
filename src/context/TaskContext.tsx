@@ -6,6 +6,7 @@ import {
   CreateTaskPayload,
   UpdateTaskPayload,
   DragEndData,
+  TaskStatus,
 } from "../types";
 
 export const TaskContext = createContext<TaskContextType>({
@@ -16,6 +17,7 @@ export const TaskContext = createContext<TaskContextType>({
   updateTask: async () => {},
   fetchTasks: async () => {},
   moveTask: async () => {},
+  reorderTasks: () => {},
 });
 
 interface TaskProviderProps {
@@ -81,7 +83,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     setTasks((prevTasks) =>
       prevTasks.map((t) => (t.id === task.id ? updatedTask : t))
     );
-
     try {
       await taskApi.updateTask({
         id: task.id,
@@ -94,6 +95,15 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
       setError("Failed to move task. Please try again later.");
       console.error("Error moving task:", err);
     }
+  };
+
+  const reorderTasks = (status: TaskStatus, newOrder: Task[]): void => {
+    setTasks((prevTasks) => {
+      const tasksInOtherColumns = prevTasks.filter(
+        (task) => task.status !== status
+      );
+      return [...tasksInOtherColumns, ...newOrder];
+    });
   };
 
   useEffect(() => {
@@ -110,6 +120,7 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
         updateTask,
         fetchTasks,
         moveTask,
+        reorderTasks,
       }}
     >
       {children}

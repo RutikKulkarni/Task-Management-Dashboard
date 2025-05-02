@@ -33,4 +33,5 @@ export type TaskContextType = {
   updateTask: (task: UpdateTaskPayload) => Promise<void>;
   fetchTasks: () => Promise<void>;
   moveTask: (dragEndData: DragEndData) => Promise<void>;
+  reorderTasks: (status: TaskStatus, newOrder: Task[]) => void;
 };

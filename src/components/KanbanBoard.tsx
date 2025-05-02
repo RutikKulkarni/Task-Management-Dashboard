@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
+  DragStartEvent,
   DragOverlay,
   PointerSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { arrayMove } from "@dnd-kit/sortable";
 import KanbanColumn from "./KanbanColumn";
 import TaskCard from "./TaskCard";
 import AddTaskModal from "./AddTaskModal";
@@ -16,7 +18,8 @@ import { Task, TaskStatus } from "../types";
 import ThemeToggle from "./ThemeToggle";
 
 const KanbanBoard: React.FC = () => {
-  const { todoTasks, inProgressTasks, doneTasks, moveTask } = useTasks();
+  const { todoTasks, inProgressTasks, doneTasks, moveTask, reorderTasks } =
+    useTasks();
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
 
@@ -28,12 +31,58 @@ const KanbanBoard: React.FC = () => {
     })
   );
 
-  const handleDragStart = (event: DragEndEvent) => {
+  const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const activeData = active.data.current as { task: Task } | undefined;
-
     if (activeData) {
       setActiveTask(activeData.task);
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+
+    if (!over || !active) return;
+
+    const activeData = active.data.current as { task: Task } | undefined;
+    const overData = over.data.current as
+      | { task?: Task; status?: TaskStatus }
+      | undefined;
+
+    if (!activeData || !activeData.task) return;
+
+    if (overData?.task && active.id !== over.id) {
+      const activeStatus = activeData.task.status;
+      const overStatus = overData.task.status;
+
+      if (activeStatus === overStatus) {
+        let tasksInColumn: Task[];
+        switch (activeStatus) {
+          case "todo":
+            tasksInColumn = todoTasks;
+            break;
+          case "inProgress":
+            tasksInColumn = inProgressTasks;
+            break;
+          case "done":
+            tasksInColumn = doneTasks;
+            break;
+          default:
+            return;
+        }
+
+        const activeIndex = tasksInColumn.findIndex(
+          (t) => t.id === activeData.task.id
+        );
+        const overIndex = tasksInColumn.findIndex(
+          (t) => overData.task && t.id === overData.task.id
+        );
+
+        if (activeIndex !== -1 && overIndex !== -1) {
+          const newOrder = arrayMove(tasksInColumn, activeIndex, overIndex);
+          reorderTasks(activeStatus, newOrder);
+        }
+      }
     }
   };
 
@@ -42,13 +91,24 @@ const KanbanBoard: React.FC = () => {
 
     if (over && active.id !== over.id) {
       const activeData = active.data.current as { task: Task } | undefined;
-      const destination = over.id as TaskStatus;
+      const overData = over.data.current as
+        | { task?: Task; status?: TaskStatus }
+        | undefined;
 
       if (activeData && activeData.task) {
-        moveTask({
-          task: activeData.task,
-          destination,
-        });
+        if (overData?.task) {
+          if (activeData.task.status !== overData.task.status) {
+            moveTask({
+              task: activeData.task,
+              destination: overData.task.status,
+            });
+          }
+        } else if (overData?.status) {
+          moveTask({
+            task: activeData.task,
+            destination: overData.status,
+          });
+        }
       }
     }
 
@@ -75,6 +135,7 @@ const KanbanBoard: React.FC = () => {
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -88,7 +149,7 @@ const KanbanBoard: React.FC = () => {
         </div>
 
         <DragOverlay>
-          {activeTask ? <TaskCard task={activeTask} /> : null}
+          {activeTask ? <TaskCard task={activeTask} isDragging={true} /> : null}
         </DragOverlay>
       </DndContext>
 

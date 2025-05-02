@@ -6,9 +6,10 @@ import TaskDetailsModal from "./TaskDetailsModal";
 
 interface TaskCardProps {
   task: Task;
+  isDragging?: boolean;
 }
 
-const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
+const TaskCard: React.FC<TaskCardProps> = ({ task, isDragging = false }) => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   const {
@@ -17,7 +18,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     setNodeRef,
     transform,
     transition,
-    isDragging,
+    isDragging: isSortableDragging,
+    over,
   } = useSortable({
     id: task.id.toString(),
     data: {
@@ -28,7 +30,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging || isSortableDragging ? 0.5 : 1,
+    position: "relative" as const,
   };
 
   const statusColor = {
@@ -51,6 +54,8 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     }
   };
 
+  const isBeingDraggedOver = over?.id === task.id.toString();
+
   return (
     <>
       <div
@@ -58,32 +63,37 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
         style={style}
         {...attributes}
         {...listeners}
-        className="p-4 mb-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 cursor-grab hover:shadow-md transition-shadow"
+        className={`p-4 mb-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm border ${
+          isBeingDraggedOver
+            ? "border-blue-500 dark:border-blue-600 shadow-lg"
+            : "border-gray-200 dark:border-gray-700"
+        } cursor-grab hover:shadow-md transition-shadow`}
         onClick={() => setIsDetailsModalOpen(true)}
       >
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">
+        {isBeingDraggedOver && (
+          <div className="absolute inset-0 bg-blue-100 dark:bg-blue-900 opacity-20 rounded-lg pointer-events-none" />
+        )}
+
+        <div className="flex justify-between items-start mb-2 gap-2">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2 flex-1">
             {task.title}
           </h3>
           <span
-            className={`text-xs px-2 py-1 rounded-full ${
+            className={`text-xs px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${
               statusColor[task.status]
             }`}
           >
             {formatStatus(task.status)}
           </span>
         </div>
+
         {task.description && (
           <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
             {task.description}
           </p>
         )}
+
         <div className="flex justify-between items-center mt-2">
-          {/* {task.userId && (
-            <span className="text-xs text-gray-500 dark:text-gray-500">
-              User: {task.userId}
-            </span>
-          )} */}
           <button
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
             onClick={(e) => {

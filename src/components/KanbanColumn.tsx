@@ -20,6 +20,9 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
 }) => {
   const { setNodeRef, isOver } = useDroppable({
     id: status,
+    data: {
+      status: status,
+    },
   });
 
   const taskIds = tasks.map((task) => task.id.toString());
