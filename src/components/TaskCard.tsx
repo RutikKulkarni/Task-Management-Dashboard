@@ -9,8 +9,11 @@ interface TaskCardProps {
 }
 
 const TaskCard: React.FC<TaskCardProps> = ({ task, index, onTaskClick }) => {
+  // We ensure the draggableId is a string (React Beautiful DnD requirement)
+  const draggableId = String(task.id);
+
   return (
-    <Draggable draggableId={task.id} index={index}>
+    <Draggable draggableId={draggableId} index={index}>
       {(provided, snapshot) => (
         <div
           className={`task-card ${
@@ -23,14 +26,20 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, index, onTaskClick }) => {
         >
           <h3 className="font-semibold text-gray-900 mb-1">{task.title}</h3>
           <p className="text-gray-600 text-sm mb-2 line-clamp-2">
-            {task.description}
+            {task.description || "No description provided"}
           </p>
-          <div className="flex justify-between items-center text-xs text-gray-500">
-            <span>ID: {task.id.substring(0, 4)}...</span>
-            <span>{new Date(task.createdAt).toLocaleDateString()}</span>
-          </div>
-          <div className="mt-2 text-xs text-right text-blue-500">
-            Click to view details
+          <div className="flex justify-between items-center text-xs text-gray-500 mt-2">
+            <span>
+              ID:{" "}
+              {typeof task.id === "string" && task.id.length > 8
+                ? `${task.id.substring(0, 4)}...`
+                : task.id}
+            </span>
+            <span>
+              {task.createdAt
+                ? new Date(task.createdAt).toLocaleDateString()
+                : "Unknown date"}
+            </span>
           </div>
         </div>
       )}

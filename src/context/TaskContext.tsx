@@ -53,26 +53,17 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
         const fetchedTasks = await fetchTasks();
         setTasks(fetchedTasks);
 
-        // Update columns with task IDs
-        setColumns((prevColumns) => {
-          const newColumns = [...prevColumns];
-
-          // Reset taskIds arrays
-          newColumns.forEach((column) => {
-            column.taskIds = [];
-          });
-
-          // Assign tasks to columns
-          fetchedTasks.forEach((task) => {
-            const column = newColumns.find((col) => col.status === task.status);
-            if (column) {
-              column.taskIds.push(task.id);
-            }
-          });
-
-          return newColumns;
+        // Build column taskIds from fetched tasks
+        const newColumns = columns.map((column) => {
+          return {
+            ...column,
+            taskIds: fetchedTasks
+              .filter((task) => task.status === column.status)
+              .map((task) => task.id),
+          };
         });
 
+        setColumns(newColumns);
         setLoading(false);
       } catch (err) {
         setError("Failed to fetch tasks");
@@ -88,20 +79,21 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
   const addTask = async (newTaskData: Omit<Task, "id" | "createdAt">) => {
     try {
       const newTask = await createTask(newTaskData);
+
+      // Update tasks state with the new task
       setTasks((prevTasks) => [...prevTasks, newTask]);
 
-      // Add task ID to appropriate column
+      // Update column taskIds
       setColumns((prevColumns) => {
-        const newColumns = [...prevColumns];
-        const columnIndex = newColumns.findIndex(
-          (col) => col.status === newTask.status
-        );
-
-        if (columnIndex !== -1) {
-          newColumns[columnIndex].taskIds.push(newTask.id);
-        }
-
-        return newColumns;
+        return prevColumns.map((column) => {
+          if (column.status === newTask.status) {
+            return {
+              ...column,
+              taskIds: [...column.taskIds, newTask.id],
+            };
+          }
+          return column;
+        });
       });
     } catch (err) {
       setError("Failed to add task");
@@ -113,16 +105,18 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
   const updateTaskStatus = async (taskId: string, newStatus: TaskStatus) => {
     try {
       const taskToUpdate = tasks.find((task) => task.id === taskId);
-
-      if (taskToUpdate) {
-        const updatedTask = { ...taskToUpdate, status: newStatus };
-        await updateTask(updatedTask);
-
-        // Update task in state
-        setTasks((prevTasks) =>
-          prevTasks.map((task) => (task.id === taskId ? updatedTask : task))
-        );
+      if (!taskToUpdate) {
+        console.error("Task not found:", taskId);
+        return;
       }
+
+      const updatedTask = { ...taskToUpdate, status: newStatus };
+      await updateTask(updatedTask);
+
+      // Update tasks state with the updated task
+      setTasks((prevTasks) =>
+        prevTasks.map((task) => (task.id === taskId ? updatedTask : task))
+      );
     } catch (err) {
       setError("Failed to update task");
       console.error(err);
@@ -136,31 +130,41 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     destinationStatus: TaskStatus
   ) => {
     try {
+      // Find source and destination columns
+      const sourceColumn = columns.find((col) => col.status === sourceStatus);
+      const destColumn = columns.find(
+        (col) => col.status === destinationStatus
+      );
+
+      if (!sourceColumn || !destColumn) {
+        console.error("Could not find source or destination column");
+        return;
+      }
+
       // Update columns state
       setColumns((prevColumns) => {
-        const newColumns = [...prevColumns];
-
-        // Find source and destination columns
-        const sourceColumn = newColumns.find(
-          (col) => col.status === sourceStatus
-        );
-        const destColumn = newColumns.find(
-          (col) => col.status === destinationStatus
-        );
-
-        if (sourceColumn && destColumn) {
+        return prevColumns.map((column) => {
           // Remove from source column
-          sourceColumn.taskIds = sourceColumn.taskIds.filter(
-            (id) => id !== taskId
-          );
-
-          // Add to destination column if not already there
-          if (!destColumn.taskIds.includes(taskId)) {
-            destColumn.taskIds.push(taskId);
+          if (column.status === sourceStatus) {
+            return {
+              ...column,
+              taskIds: column.taskIds.filter((id) => id !== taskId),
+            };
           }
-        }
 
-        return newColumns;
+          // Add to destination column
+          if (column.status === destinationStatus) {
+            // Check if taskId already exists in destination to prevent duplicates
+            if (!column.taskIds.includes(taskId)) {
+              return {
+                ...column,
+                taskIds: [...column.taskIds, taskId],
+              };
+            }
+          }
+
+          return column;
+        });
       });
 
       // Update task status

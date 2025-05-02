@@ -38,6 +38,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             className={`min-h-[400px] ${
               snapshot.isDraggingOver ? "bg-gray-100 bg-opacity-50" : ""
             }`}
+            data-column-id={column.id}
+            data-status={column.status}
           >
             {tasks.map((task, index) => (
               <TaskCard

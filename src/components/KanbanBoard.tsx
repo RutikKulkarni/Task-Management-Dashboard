@@ -17,41 +17,12 @@ const KanbanBoard: React.FC = () => {
     setIsDetailsModalOpen(true);
   };
 
-  // const handleDragEnd = async (result: DropResult) => {
-  //   const { destination, source, draggableId } = result;
-
-  //   // If no destination or dropped in the same place
-  //   if (
-  //     !destination ||
-  //     (destination.droppableId === source.droppableId &&
-  //       destination.index === source.index)
-  //   ) {
-  //     return;
-  //   }
-
-  //   // Find the task that was dragged
-  //   const task = tasks.find((t) => t.id === draggableId);
-  //   if (!task) return;
-
-  //   // Find source and destination columns
-  //   const sourceColumn = columns.find((c) => c.id === source.droppableId);
-  //   const destColumn = columns.find((c) => c.id === destination.droppableId);
-
-  //   if (!sourceColumn || !destColumn) return;
-
-  //   // If moved to a different column, update the task status
-  //   if (sourceColumn.id !== destColumn.id) {
-  //     await moveTask(task.id, sourceColumn.status, destColumn.status);
-  //   }
-  // };
-  // const { tasks, columns, loading, error, moveTask } = useTasks();
-
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
+    // If no destination or dropped in the same place
     if (!destination) return;
 
-    // Prevent unnecessary updates if dropped in same position
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
@@ -59,27 +30,45 @@ const KanbanBoard: React.FC = () => {
       return;
     }
 
-    const sourceColumn = columns.find((c) => c.id === source.droppableId);
-    const destColumn = columns.find((c) => c.id === destination.droppableId);
+    // Find source and destination columns by ID
+    const sourceColumn = columns.find((col) => col.id === source.droppableId);
+    const destColumn = columns.find(
+      (col) => col.id === destination.droppableId
+    );
 
-    if (!sourceColumn || !destColumn) return;
+    if (!sourceColumn || !destColumn) {
+      console.error("Could not find source or destination column", {
+        sourceId: source.droppableId,
+        destId: destination.droppableId,
+        availableColumns: columns.map((c) => c.id),
+      });
+      return;
+    }
 
-    // Move task to new position
-    try {
-      await moveTask(draggableId, sourceColumn.status, destColumn.status);
-    } catch (err) {
-      console.error("Error moving task:", err);
+    // Find the task that was dragged
+    const taskToMove = tasks.find((t) => t.id === draggableId);
+    if (!taskToMove) {
+      console.error("Could not find task with ID:", draggableId);
+      return;
+    }
+
+    // Update task status if moving between different columns
+    if (sourceColumn.status !== destColumn.status) {
+      try {
+        await moveTask(draggableId, sourceColumn.status, destColumn.status);
+      } catch (err) {
+        console.error("Error moving task:", err);
+      }
     }
   };
 
   // Get tasks for a specific column
   const getTasksForColumn = (columnId: string): Task[] => {
-    const column = columns.find((c) => c.id === columnId);
+    const column = columns.find((col) => col.id === columnId);
     if (!column) return [];
 
-    return column.taskIds
-      .map((taskId) => tasks.find((t) => t.id === taskId))
-      .filter((task) => task !== undefined) as Task[];
+    // Get all tasks that match the column's status
+    return tasks.filter((task) => task.status === column.status);
   };
 
   if (loading) {
@@ -133,7 +122,6 @@ const KanbanBoard: React.FC = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />
-
       <TaskDetailsModal
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
