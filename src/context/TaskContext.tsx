@@ -77,20 +77,17 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     task,
     destination,
   }: DragEndData): Promise<void> => {
-    // Optimistically update the UI
     const updatedTask = { ...task, status: destination };
     setTasks((prevTasks) =>
       prevTasks.map((t) => (t.id === task.id ? updatedTask : t))
     );
 
-    // Then update the backend
     try {
       await taskApi.updateTask({
         id: task.id,
         status: destination,
       });
     } catch (err) {
-      // Revert the UI change if the API call fails
       setTasks((prevTasks) =>
         prevTasks.map((t) => (t.id === task.id ? task : t))
       );
@@ -99,7 +96,6 @@ export const TaskProvider: React.FC<TaskProviderProps> = ({ children }) => {
     }
   };
 
-  // Fetch tasks on component mount
   useEffect(() => {
     fetchTasks();
   }, []);

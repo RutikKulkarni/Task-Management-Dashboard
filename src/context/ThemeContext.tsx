@@ -18,9 +18,7 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Check if theme is stored in localStorage
     const savedTheme = localStorage.getItem("theme");
-    // Check if user prefers dark mode
     const prefersDark = window.matchMedia(
       "(prefers-color-scheme: dark)"
     ).matches;
@@ -29,10 +27,8 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   });
 
   useEffect(() => {
-    // Update localStorage when theme changes
     localStorage.setItem("theme", theme);
 
-    // Update document class for Tailwind dark mode
     if (theme === "dark") {
       document.documentElement.classList.add("dark");
     } else {

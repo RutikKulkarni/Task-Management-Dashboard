@@ -9,7 +9,6 @@ export const useTasks = () => {
     throw new Error("useTasks must be used within a TaskProvider");
   }
 
-  // Helper function to filter tasks by status
   const getTasksByStatus = (status: TaskStatus): Task[] => {
     return context.tasks.filter((task) => task.status === status);
   };

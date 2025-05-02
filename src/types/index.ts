@@ -5,14 +5,12 @@ export interface Task {
   title: string;
   description: string;
   status: TaskStatus;
-  userId?: number;
 }
 
 export interface CreateTaskPayload {
   title: string;
   description: string;
   status: TaskStatus;
-  userId?: number;
 }
 
 export interface UpdateTaskPayload {

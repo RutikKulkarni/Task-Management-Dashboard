@@ -28,7 +28,6 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose }) => {
       title,
       description,
       status,
-      userId: 1, // Default user ID
     };
 
     try {
@@ -58,7 +57,6 @@ const AddTaskModal: React.FC<AddTaskModalProps> = ({ isOpen, onClose }) => {
             className="text-gray-400 hover:text-gray-500 focus:outline-none"
           >
             <IoClose className="h-6 w-6" />{" "}
-            {/* Using IoClose from react-icons */}
           </button>
         </div>
 

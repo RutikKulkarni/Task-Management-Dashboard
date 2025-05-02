@@ -31,7 +31,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     opacity: isDragging ? 0.5 : 1,
   };
 
-  // Status badge color based on task status
   const statusColor = {
     todo: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
     inProgress:
@@ -39,7 +38,6 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
     done: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
   };
 
-  // Format status text for display
   const formatStatus = (status: string): string => {
     switch (status) {
       case "todo":
@@ -81,11 +79,11 @@ const TaskCard: React.FC<TaskCardProps> = ({ task }) => {
           </p>
         )}
         <div className="flex justify-between items-center mt-2">
-          {task.userId && (
+          {/* {task.userId && (
             <span className="text-xs text-gray-500 dark:text-gray-500">
               User: {task.userId}
             </span>
-          )}
+          )} */}
           <button
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
             onClick={(e) => {

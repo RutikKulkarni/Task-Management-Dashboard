@@ -22,10 +22,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
     id: status,
   });
 
-  // Get unique task IDs for the sortable context
   const taskIds = tasks.map((task) => task.id.toString());
 
-  // Column styling based on status
   const getColumnStyle = () => {
     switch (status) {
       case "todo":

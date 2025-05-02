@@ -20,7 +20,6 @@ export const taskApi = {
           : Math.random() > 0.5
           ? "inProgress"
           : "todo",
-        userId: item.userId,
       }));
     } catch (error) {
       console.error("Error fetching tasks:", error);
@@ -37,7 +36,6 @@ export const taskApi = {
         title: taskData.title,
         description: taskData.description,
         status: taskData.status,
-        userId: taskData.userId || 1,
       };
     } catch (error) {
       console.error("Error creating task:", error);
