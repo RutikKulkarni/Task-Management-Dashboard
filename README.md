@@ -2,6 +2,8 @@
 
 A Kanban-style task management dashboard built with React, TypeScript, and Tailwind CSS.
 
+- #### Live URL: [Task-Management-Dashboard](https://task-management-dashboard-mu.vercel.app/)
+
 ## Features
 
 - View tasks in a Kanban-style board with three columns: To Do, In Progress, and Done
