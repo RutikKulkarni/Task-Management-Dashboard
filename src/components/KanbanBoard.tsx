@@ -17,31 +17,58 @@ const KanbanBoard: React.FC = () => {
     setIsDetailsModalOpen(true);
   };
 
+  // const handleDragEnd = async (result: DropResult) => {
+  //   const { destination, source, draggableId } = result;
+
+  //   // If no destination or dropped in the same place
+  //   if (
+  //     !destination ||
+  //     (destination.droppableId === source.droppableId &&
+  //       destination.index === source.index)
+  //   ) {
+  //     return;
+  //   }
+
+  //   // Find the task that was dragged
+  //   const task = tasks.find((t) => t.id === draggableId);
+  //   if (!task) return;
+
+  //   // Find source and destination columns
+  //   const sourceColumn = columns.find((c) => c.id === source.droppableId);
+  //   const destColumn = columns.find((c) => c.id === destination.droppableId);
+
+  //   if (!sourceColumn || !destColumn) return;
+
+  //   // If moved to a different column, update the task status
+  //   if (sourceColumn.id !== destColumn.id) {
+  //     await moveTask(task.id, sourceColumn.status, destColumn.status);
+  //   }
+  // };
+  // const { tasks, columns, loading, error, moveTask } = useTasks();
+
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
-    // If no destination or dropped in the same place
+    if (!destination) return;
+
+    // Prevent unnecessary updates if dropped in same position
     if (
-      !destination ||
-      (destination.droppableId === source.droppableId &&
-        destination.index === source.index)
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
     ) {
       return;
     }
 
-    // Find the task that was dragged
-    const task = tasks.find((t) => t.id === draggableId);
-    if (!task) return;
-
-    // Find source and destination columns
     const sourceColumn = columns.find((c) => c.id === source.droppableId);
     const destColumn = columns.find((c) => c.id === destination.droppableId);
 
     if (!sourceColumn || !destColumn) return;
 
-    // If moved to a different column, update the task status
-    if (sourceColumn.id !== destColumn.id) {
-      await moveTask(task.id, sourceColumn.status, destColumn.status);
+    // Move task to new position
+    try {
+      await moveTask(draggableId, sourceColumn.status, destColumn.status);
+    } catch (err) {
+      console.error("Error moving task:", err);
     }
   };
 

@@ -26,3 +26,41 @@ body {
 .dragging {
   @apply opacity-50 shadow-lg;
 }
+
+/* ... existing styles ... */
+
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+}
+
+.theme-dark {
+  --primary: #60a5fa;
+  --primary-dark: #3b82f6;
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
+.bg-todo {
+  background-color: #f3f4f6;
+}
+
+.bg-inprogress {
+  background-color: #fef9c3;
+}
+
+.bg-done {
+  background-color: #d1fae5;
+}
+
+.theme-dark .bg-todo {
+  background-color: #374151;
+}
+
+.theme-dark .bg-inprogress {
+  background-color: #4b4b00;
+}
+
+.theme-dark .bg-done {
+  background-color: #065f46;
+}
